@@ -21,7 +21,7 @@ function dashboard() {
         // UI State
         isLoading: false,
         activeTab: 'events',
-        showConfig: false,
+        showWebhooks: false,
         showAddWebhook: false,
         showEditWebhook: false,
         showEventDetails: false,
@@ -50,18 +50,6 @@ function dashboard() {
         // Status
         lastRefresh: null,
         refreshInterval: 60,
-
-        // Config
-        unifiConfig: {
-            controller_url: '',
-            username: '',
-            password: '',
-            api_key: '',
-            site_id: 'default',
-            verify_ssl: false
-        },
-        configMessage: '',
-        configMessageType: '',
 
         // Webhook Form
         webhookForm: {
@@ -93,7 +81,6 @@ function dashboard() {
             await this.loadEvents();
             await this.loadStats();
             await this.loadCategories();
-            await this.loadConfig();
             await this.loadWebhooks();
             this.connectWebSocket();
 
@@ -189,81 +176,6 @@ function dashboard() {
                 }
             } catch (error) {
                 console.error('Failed to load categories:', error);
-            }
-        },
-
-        /**
-         * Load UniFi configuration
-         */
-        async loadConfig() {
-            try {
-                const response = await fetch('/threats/api/config/unifi');
-                if (response.ok) {
-                    const data = await response.json();
-                    this.unifiConfig.controller_url = data.controller_url || '';
-                    this.unifiConfig.username = data.username || '';
-                    this.unifiConfig.site_id = data.site_id || 'default';
-                    this.unifiConfig.verify_ssl = data.verify_ssl || false;
-                    // Password and API key are not returned for security
-                }
-            } catch (error) {
-                // Config might not exist yet, that's okay
-            }
-        },
-
-        /**
-         * Save UniFi configuration
-         */
-        async saveConfig() {
-            this.configMessage = '';
-            try {
-                const response = await fetch('/threats/api/config/unifi', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(this.unifiConfig)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    this.configMessage = 'Configuration saved successfully!';
-                    this.configMessageType = 'success';
-                    this.showToast('Configuration saved', 'success');
-                } else {
-                    this.configMessage = data.detail || 'Failed to save configuration';
-                    this.configMessageType = 'error';
-                }
-            } catch (error) {
-                this.configMessage = 'Failed to save configuration';
-                this.configMessageType = 'error';
-            }
-        },
-
-        /**
-         * Test UniFi connection
-         */
-        async testConnection() {
-            this.configMessage = 'Testing connection...';
-            this.configMessageType = '';
-
-            try {
-                const response = await fetch('/threats/api/config/unifi/test');
-                const data = await response.json();
-
-                if (data.connected) {
-                    let msg = `Connected! Found ${data.client_count} clients and ${data.ap_count} APs.`;
-                    if (data.ips_events_available) {
-                        msg += ' IPS events available.';
-                    }
-                    this.configMessage = msg;
-                    this.configMessageType = 'success';
-                } else {
-                    this.configMessage = `Connection failed: ${data.error}`;
-                    this.configMessageType = 'error';
-                }
-            } catch (error) {
-                this.configMessage = 'Connection test failed';
-                this.configMessageType = 'error';
             }
         },
 

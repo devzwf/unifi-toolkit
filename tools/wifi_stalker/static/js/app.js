@@ -29,7 +29,7 @@ function dashboard() {
 
         // Modal visibility
         showAddDevice: false,
-        showConfig: false,
+        showWebhooks: false,
         showHistory: false,
         showGetDevices: false,
         showDeviceDetails: false,
@@ -58,18 +58,6 @@ function dashboard() {
             friendly_name: '',
             site_id: 'default'
         },
-        unifiConfig: {
-            controller_url: '',
-            username: '',
-            password: '',
-            api_key: '',
-            site_id: 'default',
-            verify_ssl: false
-        },
-
-        // UI state
-        configMessage: '',
-        configMessageType: '',
         toast: {
             show: false,
             message: '',
@@ -83,7 +71,6 @@ function dashboard() {
             console.log('Initializing Wi-Fi Stalker dashboard');
             await this.loadDevices();
             await this.loadStatus();
-            await this.loadConfig();
             await this.loadWebhooks();
 
             // Connect to WebSocket for real-time updates
@@ -224,29 +211,6 @@ function dashboard() {
                 this.refreshInterval = data.refresh_interval_seconds || 60;
             } catch (error) {
                 console.error('Failed to load status:', error);
-            }
-        },
-
-        /**
-         * Load UniFi configuration
-         */
-        async loadConfig() {
-            try {
-                const response = await fetch(`${API_BASE_PATH}/api/config/unifi`);
-                if (response.ok) {
-                    const data = await response.json();
-                    this.unifiConfig.controller_url = data.controller_url;
-                    this.unifiConfig.username = data.username;
-                    this.unifiConfig.site_id = data.site_id;
-                    this.unifiConfig.verify_ssl = data.verify_ssl;
-                    // Don't load password/API key for security
-                    // But show which auth method is configured
-                    if (data.has_api_key) {
-                        console.log('Using API key authentication');
-                    }
-                }
-            } catch (error) {
-                console.log('No UniFi configuration found');
             }
         },
 
@@ -574,62 +538,6 @@ function dashboard() {
                 '6e': '6 GHz'
             };
             return bands[radio] || radio;
-        },
-
-        /**
-         * Save UniFi configuration
-         */
-        async saveConfig() {
-            this.configMessage = '';
-
-            try {
-                const response = await fetch(`${API_BASE_PATH}/api/config/unifi`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(this.unifiConfig)
-                });
-
-                if (response.ok) {
-                    this.configMessage = 'Configuration saved successfully';
-                    this.configMessageType = 'success';
-                    this.showToast('UniFi configuration saved', 'success');
-                } else {
-                    const error = await response.json();
-                    this.configMessage = error.detail || 'Failed to save configuration';
-                    this.configMessageType = 'error';
-                }
-            } catch (error) {
-                console.error('Failed to save config:', error);
-                this.configMessage = 'Failed to save configuration';
-                this.configMessageType = 'error';
-            }
-        },
-
-        /**
-         * Test UniFi connection
-         */
-        async testConnection() {
-            this.configMessage = 'Testing connection...';
-            this.configMessageType = '';
-
-            try {
-                const response = await fetch(`${API_BASE_PATH}/api/config/unifi/test`);
-                const data = await response.json();
-
-                if (data.connected) {
-                    this.configMessage = `Connection successful! Found ${data.client_count} clients and ${data.ap_count} access points.`;
-                    this.configMessageType = 'success';
-                } else {
-                    this.configMessage = `Connection failed: ${data.error}`;
-                    this.configMessageType = 'error';
-                }
-            } catch (error) {
-                console.error('Failed to test connection:', error);
-                this.configMessage = 'Failed to test connection';
-                this.configMessageType = 'error';
-            }
         },
 
         /**

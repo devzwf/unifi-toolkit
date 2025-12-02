@@ -53,8 +53,8 @@
                 <button @click="loadUniFiClients()" class="btn btn-primary" :disabled="isLoadingClients">
                     <span x-text="isLoadingClients ? 'Loading...' : '📡 Get Devices'"></span>
                 </button>
-                <button @click="showConfig = true" class="btn btn-secondary">
-                    ⚙️ UniFi Config
+                <button @click="showWebhooks = true" class="btn btn-secondary">
+                    🔔 Webhooks
                 </button>
             </div>
 
@@ -201,133 +201,53 @@
             </div>
         </div>
 
-        <!-- UniFi Config Modal -->
-        <div x-show="showConfig"
-             @click.self="showConfig = false"
+        <!-- Webhooks Modal -->
+        <div x-show="showWebhooks"
+             @click.self="showWebhooks = false"
              class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>UniFi Controller Configuration</h2>
-                    <button @click="showConfig = false" class="close-btn">×</button>
+                    <h2>Webhooks</h2>
+                    <button @click="showWebhooks = false" class="close-btn">×</button>
                 </div>
                 <div class="modal-body">
-                    <form @submit.prevent="saveConfig()">
-                        <div class="form-group">
-                            <label for="controller_url">Controller URL *</label>
-                            <input type="text"
-                                   id="controller_url"
-                                   x-model="unifiConfig.controller_url"
-                                   placeholder="https://192.168.200.1"
-                                   required>
-                            <small>For UCG/UDM: https://192.168.x.x (no port needed)</small>
-                        </div>
+                    <p class="subtitle">
+                        Configure webhooks to receive notifications when devices connect, disconnect, or roam.
+                    </p>
 
-                        <div class="auth-info-box">
-                            <strong>Authentication Method:</strong>
-                            <p>
-                                🔐 <strong>UniFi OS (UCG, UDM):</strong> Use API Key<br>
-                                🔑 <strong>Legacy Controllers:</strong> Use Username & Password
-                            </p>
-                        </div>
+                    <!-- Add Webhook Button -->
+                    <button @click="showAddWebhook = true" class="btn btn-primary webhook-add-btn">
+                        + Add Webhook
+                    </button>
 
-                        <div class="form-group">
-                            <label for="api_key">API Key (for UniFi OS devices)</label>
-                            <input type="password"
-                                   id="api_key"
-                                   x-model="unifiConfig.api_key"
-                                   placeholder="Enter API key from UniFi Settings > Integrations">
-                            <small>Leave blank if using username/password</small>
-                        </div>
+                    <!-- Webhooks List -->
+                    <div x-show="webhooks.length === 0" class="empty-state">
+                        No webhooks configured. Click "Add Webhook" to create one.
+                    </div>
 
-                        <div class="form-group">
-                            <label for="username">Username (for legacy controllers)</label>
-                            <input type="text"
-                                   id="username"
-                                   x-model="unifiConfig.username"
-                                   placeholder="admin">
-                            <small>Leave blank if using API key</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password (for legacy controllers)</label>
-                            <input type="password"
-                                   id="password"
-                                   x-model="unifiConfig.password"
-                                   placeholder="Your password">
-                            <small>Leave blank if using API key</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="config_site_id">Site ID</label>
-                            <input type="text"
-                                   id="config_site_id"
-                                   x-model="unifiConfig.site_id"
-                                   value="default">
-                            <small>Usually "default" for single-site setups</small>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox"
-                                       x-model="unifiConfig.verify_ssl">
-                                Verify SSL Certificates
-                            </label>
-                            <small>Uncheck for self-signed certificates</small>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Save Config</button>
-                            <button type="button" @click="testConnection()" class="btn btn-secondary">
-                                Test Connection
-                            </button>
-                            <button type="button" @click="showConfig = false" class="btn btn-secondary">
-                                Cancel
-                            </button>
-                        </div>
-                        <div x-show="configMessage"
-                             :class="'message ' + configMessageType"
-                             x-text="configMessage">
-                        </div>
-                    </form>
-
-                    <!-- Webhooks Section -->
-                    <div class="webhooks-section">
-                        <h3>Webhooks</h3>
-                        <p class="subtitle">
-                            Configure webhooks to receive notifications when devices connect, disconnect, or roam.
-                        </p>
-
-                        <!-- Add Webhook Button -->
-                        <button @click="showAddWebhook = true" class="btn btn-primary webhook-add-btn">
-                            + Add Webhook
-                        </button>
-
-                        <!-- Webhooks List -->
-                        <div x-show="webhooks.length === 0" class="empty-state">
-                            No webhooks configured. Click "Add Webhook" to create one.
-                        </div>
-
-                        <div x-show="webhooks.length > 0" class="webhooks-list">
-                            <template x-for="webhook in webhooks" :key="webhook.id">
-                                <div class="webhook-item">
-                                    <div class="webhook-item-content">
-                                        <div class="webhook-item-info">
-                                            <strong x-text="webhook.name"></strong>
-                                            <span class="badge webhook-type-badge" x-text="webhook.webhook_type"></span>
-                                            <span x-show="!webhook.enabled" class="badge webhook-disabled-badge">Disabled</span>
-                                            <div class="webhook-events">
-                                                Events:
-                                                <span x-show="webhook.event_device_connected">Connected</span>
-                                                <span x-show="webhook.event_device_disconnected">Disconnected</span>
-                                                <span x-show="webhook.event_device_roamed">Roamed</span>
-                                            </div>
-                                        </div>
-                                        <div class="webhook-item-actions">
-                                            <button @click="testWebhook(webhook.id)" class="btn btn-sm btn-secondary">Test</button>
-                                            <button @click="editWebhook(webhook)" class="btn btn-sm btn-secondary">Edit</button>
-                                            <button @click="deleteWebhook(webhook.id)" class="btn btn-sm btn-danger">Delete</button>
+                    <div x-show="webhooks.length > 0" class="webhooks-list">
+                        <template x-for="webhook in webhooks" :key="webhook.id">
+                            <div class="webhook-item">
+                                <div class="webhook-item-content">
+                                    <div class="webhook-item-info">
+                                        <strong x-text="webhook.name"></strong>
+                                        <span class="badge webhook-type-badge" x-text="webhook.webhook_type"></span>
+                                        <span x-show="!webhook.enabled" class="badge webhook-disabled-badge">Disabled</span>
+                                        <div class="webhook-events">
+                                            Events:
+                                            <span x-show="webhook.event_device_connected">Connected</span>
+                                            <span x-show="webhook.event_device_disconnected">Disconnected</span>
+                                            <span x-show="webhook.event_device_roamed">Roamed</span>
                                         </div>
                                     </div>
+                                    <div class="webhook-item-actions">
+                                        <button @click="testWebhook(webhook.id)" class="btn btn-sm btn-secondary">Test</button>
+                                        <button @click="editWebhook(webhook)" class="btn btn-sm btn-secondary">Edit</button>
+                                        <button @click="deleteWebhook(webhook.id)" class="btn btn-sm btn-danger">Delete</button>
+                                    </div>
                                 </div>
-                            </template>
-                        </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>

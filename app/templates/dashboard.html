@@ -27,6 +27,9 @@
                 </div>
                 <div class="header-right">
                     <div class="header-actions">
+                        <button class="settings-btn" id="settings-btn" title="UniFi Settings">
+                            <span class="settings-icon">⚙️</span>
+                        </button>
                         {% if auth_enabled %}
                         <a href="/logout" class="logout-btn" title="Logout">
                             <span class="logout-icon">🚪</span>
@@ -856,6 +859,10 @@
             }
 
             // Event listeners
+            const settingsBtn = document.getElementById('settings-btn');
+
+            settingsBtn.addEventListener('click', openModal);
+
             configureLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 openModal();
