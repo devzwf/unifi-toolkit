@@ -311,49 +311,6 @@ body {
     border: none;
 }
 
-.speedtest-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.6rem;
-    transition: all 0.2s;
-}
-
-.speedtest-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.05);
-}
-
-.speedtest-btn:disabled {
-    background: var(--secondary-color);
-    cursor: not-allowed;
-    transform: none;
-}
-
-.speedtest-btn.running {
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.speedtest-status {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    text-align: center;
-    margin-top: 0.5rem;
-    min-height: 1rem;
-}
-
 /* Loading and Error States */
 .status-loading,
 .status-error {

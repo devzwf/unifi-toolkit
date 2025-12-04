@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="UI Toolkit",
     description="Comprehensive toolkit for UniFi network management and monitoring",
-    version="1.4.1",
+    version="1.5.0",
     lifespan=lifespan
 )
 
@@ -142,7 +142,7 @@ async def health_check():
 
     return {
         "status": "healthy",
-        "version": "1.4.0",
+        "version": "1.5.0",
         "tools": {
             "wifi_stalker": stalker_version,
             "threat_watch": threat_watch_version
@@ -223,62 +223,6 @@ async def get_system_status():
             "connected": False,
             "error": str(e)
         }
-
-
-@app.post("/api/speedtest")
-async def trigger_speedtest():
-    """
-    Trigger a speedtest on the UniFi gateway
-    """
-    from shared.unifi_client import UniFiClient
-    from shared.crypto import decrypt_password, decrypt_api_key
-    from shared.models.unifi_config import UniFiConfig
-
-    db = get_database()
-
-    try:
-        # Get UniFi config from database
-        async for session in db.get_session():
-            from sqlalchemy import select
-            result = await session.execute(select(UniFiConfig))
-            config = result.scalar_one_or_none()
-            break
-
-        if not config:
-            return {"success": False, "error": "UniFi controller not configured"}
-
-        # Decrypt credentials
-        password = None
-        api_key = None
-        if config.password_encrypted:
-            password = decrypt_password(config.password_encrypted)
-        if config.api_key_encrypted:
-            api_key = decrypt_api_key(config.api_key_encrypted)
-
-        # Create client and trigger speedtest
-        client = UniFiClient(
-            host=config.controller_url,
-            username=config.username,
-            password=password,
-            api_key=api_key,
-            site=config.site_id,
-            verify_ssl=config.verify_ssl
-        )
-
-        try:
-            connected = await client.connect()
-            if not connected:
-                return {"success": False, "error": "Failed to connect to UniFi controller"}
-
-            result = await client.run_speedtest()
-            return result
-
-        finally:
-            await client.disconnect()
-
-    except Exception as e:
-        logger.error(f"Failed to trigger speedtest: {e}")
-        return {"success": False, "error": str(e)}
 
 
 @app.websocket("/ws")

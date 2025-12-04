@@ -573,7 +573,6 @@ class UniFiClient:
             - mem_utilization: Memory usage percentage
             - wan_status: WAN connection status
             - wan_ip: WAN IP address
-            - speedtest_status: Latest speedtest results
         """
         if not self._session:
             raise RuntimeError("Not connected to UniFi controller. Call connect() first.")
@@ -728,12 +727,6 @@ class UniFiClient:
                                 if gw_stats:
                                     health[subsystem]['uptime'] = gw_stats.get('uptime')
 
-                            # WWW-specific: check speedtest status (regardless of overall status)
-                            if subsystem == 'www':
-                                speedtest_status = item.get('speedtest_status')
-                                if speedtest_status and speedtest_status.lower() == 'error':
-                                    health[subsystem]['speedtest_error'] = True
-
                             # Build a reason string for non-ok status
                             if item.get('status') != 'ok':
                                 reasons = []
@@ -804,84 +797,6 @@ class UniFiClient:
         except Exception as e:
             logger.error(f"Failed to get WAN stats: {e}")
             return {}
-
-    async def run_speedtest(self) -> Dict:
-        """
-        Trigger a speedtest on the UniFi gateway
-
-        Returns:
-            Dictionary with speedtest status
-        """
-        if not self._session:
-            raise RuntimeError("Not connected to UniFi controller. Call connect() first.")
-
-        try:
-            if self.is_unifi_os:
-                url = f"{self.host}/proxy/network/api/s/{self.site}/cmd/devmgr"
-            else:
-                url = f"{self.host}/api/s/{self.site}/cmd/devmgr"
-
-            payload = {"cmd": "speedtest"}
-
-            async with self._session.post(url, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    logger.info("Speedtest triggered successfully")
-                    return {
-                        "success": True,
-                        "message": "Speedtest started"
-                    }
-                else:
-                    logger.error(f"Failed to trigger speedtest: {resp.status}")
-                    return {
-                        "success": False,
-                        "error": f"API returned status {resp.status}"
-                    }
-
-        except Exception as e:
-            logger.error(f"Failed to trigger speedtest: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-
-    async def get_speedtest_status(self) -> Dict:
-        """
-        Get the current speedtest status/results
-
-        Returns:
-            Dictionary with speedtest results
-        """
-        if not self._session:
-            raise RuntimeError("Not connected to UniFi controller. Call connect() first.")
-
-        try:
-            if self.is_unifi_os:
-                url = f"{self.host}/proxy/network/api/s/{self.site}/cmd/devmgr"
-            else:
-                url = f"{self.host}/api/s/{self.site}/cmd/devmgr"
-
-            payload = {"cmd": "speedtest-status"}
-
-            async with self._session.post(url, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return {
-                        "success": True,
-                        "data": data.get('data', {})
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error": f"API returned status {resp.status}"
-                    }
-
-        except Exception as e:
-            logger.error(f"Failed to get speedtest status: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
 
     async def has_gateway(self) -> bool:
         """

@@ -136,29 +136,23 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Speedtest Results -->
+                    <!-- Internet Stats -->
                     <div class="detail-card">
-                        <div class="detail-card-header">
-                            <h4>Speedtest Results</h4>
-                            <button class="speedtest-btn" id="speedtest-btn" title="Run Speedtest">
-                                <span id="speedtest-icon">▶</span>
-                            </button>
-                        </div>
+                        <h4>Internet Stats</h4>
                         <div class="detail-list">
                             <div class="detail-row">
+                                <span>Latency</span>
+                                <span id="wan-latency">--</span>
+                            </div>
+                            <div class="detail-row">
                                 <span>Download</span>
-                                <span id="download-speed">--</span>
+                                <span id="current-download">--</span>
                             </div>
                             <div class="detail-row">
                                 <span>Upload</span>
-                                <span id="upload-speed">--</span>
-                            </div>
-                            <div class="detail-row">
-                                <span>Latency</span>
-                                <span id="latency">--</span>
+                                <span id="current-upload">--</span>
                             </div>
                         </div>
-                        <div class="speedtest-status" id="speedtest-status"></div>
                     </div>
                     <!-- Network Health -->
                     <div class="detail-card">
@@ -493,10 +487,22 @@
                 }
             }
 
-            // Format speed in Mbps
-            function formatSpeed(mbps) {
-                if (!mbps) return '--';
-                return `${Math.round(mbps)} Mbps`;
+            // Format throughput (bytes/sec to bits/sec, human readable)
+            function formatThroughput(bytesPerSec) {
+                if (!bytesPerSec || bytesPerSec === 0) return '--';
+
+                // Convert bytes to bits
+                const bitsPerSec = bytesPerSec * 8;
+                const kbps = bitsPerSec / 1000;
+                const mbps = kbps / 1000;
+
+                if (mbps >= 1) {
+                    return `${mbps.toFixed(1)} Mbps`;
+                } else if (kbps >= 1) {
+                    return `${kbps.toFixed(1)} Kbps`;
+                } else {
+                    return `${Math.round(bitsPerSec)} bps`;
+                }
             }
 
             // Set health badge and reason
@@ -552,7 +558,7 @@
 
                     const isRevealed = this.dataset.revealed === 'true';
                     if (isRevealed) {
-                        this.textContent = '•••.•••.•••.•••';
+                        this.textContent = '(click to show)';
                         this.dataset.revealed = 'false';
                         this.title = 'Click to reveal';
                     } else {
@@ -615,7 +621,7 @@
                     const wanIpEl = document.getElementById('wan-ip');
                     const wanIp = system.wan_ip || '--';
                     wanIpEl.dataset.ip = wanIp;
-                    wanIpEl.textContent = wanIp === '--' ? '--' : '•••.•••.•••.•••';
+                    wanIpEl.textContent = wanIp === '--' ? '--' : '(click to show)';
                     wanIpEl.dataset.revealed = 'false';
 
                     // WAN availability from health stats
@@ -630,7 +636,7 @@
                         const wan2IpEl = document.getElementById('wan2-ip');
                         const wan2Ip = health.wan2.wan_ip || '--';
                         wan2IpEl.dataset.ip = wan2Ip;
-                        wan2IpEl.textContent = wan2Ip === '--' ? '--' : '•••.•••.•••.•••';
+                        wan2IpEl.textContent = wan2Ip === '--' ? '--' : '(click to show)';
                         wan2IpEl.dataset.revealed = 'false';
                         const wan2Avail = health.wan2.availability;
                         document.getElementById('wan2-availability').textContent = wan2Avail ? `${wan2Avail.toFixed(2)}%` : '--';
@@ -639,11 +645,11 @@
                         document.getElementById('wan2-availability-row').style.display = 'none';
                     }
 
-                    // Speedtest results - use www latency if speedtest latency is 0
-                    document.getElementById('download-speed').textContent = formatSpeed(system.download_speed);
-                    document.getElementById('upload-speed').textContent = formatSpeed(system.upload_speed);
-                    const latencyValue = system.latency || health.www?.latency;
-                    document.getElementById('latency').textContent = latencyValue ? `${Math.round(latencyValue)} ms` : '--';
+                    // Internet stats from www health
+                    const wwwLatency = health.www?.latency;
+                    document.getElementById('wan-latency').textContent = wwwLatency ? `${Math.round(wwwLatency)} ms` : '--';
+                    document.getElementById('current-download').textContent = formatThroughput(health.www?.rx_bytes);
+                    document.getElementById('current-upload').textContent = formatThroughput(health.www?.tx_bytes);
 
                     // Update health badges with reasons
                     setHealthBadge('wan-health', health.wan?.status, health.wan?.status_reason);
@@ -666,12 +672,6 @@
                         document.getElementById('vpn-health-row').style.display = 'none';
                     }
 
-                    // Handle speedtest error - disable button if speedtest is broken
-                    if (health.www?.speedtest_error) {
-                        speedtestBtn.disabled = true;
-                        speedtestBtn.title = 'Speedtest not available';
-                        speedtestStatus.textContent = 'Speedtest not available on this gateway';
-                    }
 
                 } catch (error) {
                     console.error('Failed to load system status:', error);
@@ -680,47 +680,6 @@
                     errorMessage.textContent = 'Failed to load system status';
                 }
             }
-
-            // Speedtest functionality
-            const speedtestBtn = document.getElementById('speedtest-btn');
-            const speedtestIcon = document.getElementById('speedtest-icon');
-            const speedtestStatus = document.getElementById('speedtest-status');
-
-            speedtestBtn.addEventListener('click', async function(e) {
-                e.stopPropagation(); // Prevent accordion toggle
-
-                // Disable button and show running state
-                speedtestBtn.disabled = true;
-                speedtestBtn.classList.add('running');
-                speedtestIcon.textContent = '...';
-                speedtestStatus.textContent = 'Starting speedtest...';
-
-                try {
-                    const response = await fetch('/api/speedtest', { method: 'POST' });
-                    const data = await response.json();
-
-                    if (data.success) {
-                        speedtestStatus.textContent = 'Speedtest running... results will update shortly';
-                        // Poll for results after a delay
-                        setTimeout(async () => {
-                            await loadSystemStatus();
-                            speedtestStatus.textContent = 'Speedtest complete!';
-                            setTimeout(() => {
-                                speedtestStatus.textContent = '';
-                            }, 3000);
-                        }, 30000); // Wait 30 seconds for speedtest to complete
-                    } else {
-                        speedtestStatus.textContent = data.error || 'Failed to start speedtest';
-                    }
-                } catch (error) {
-                    console.error('Speedtest error:', error);
-                    speedtestStatus.textContent = 'Error starting speedtest';
-                } finally {
-                    speedtestBtn.disabled = false;
-                    speedtestBtn.classList.remove('running');
-                    speedtestIcon.textContent = '▶';
-                }
-            });
 
             // Load on page load
             loadSystemStatus();
