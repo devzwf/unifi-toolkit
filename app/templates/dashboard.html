@@ -482,6 +482,9 @@
             const statusError = document.getElementById('status-error');
             const errorMessage = document.getElementById('error-message');
 
+            // Track if we've successfully loaded data at least once
+            let hasLoadedOnce = false;
+
             // Format uptime from seconds to human readable
             function formatUptime(seconds) {
                 if (!seconds) return '--';
@@ -585,8 +588,11 @@
 
             // Load system status
             async function loadSystemStatus() {
-                statusLoading.classList.add('visible');
-                statusHeader.classList.add('hidden');
+                // Only show loading indicator on initial load (before we have data)
+                if (!hasLoadedOnce) {
+                    statusLoading.classList.add('visible');
+                    statusHeader.classList.add('hidden');
+                }
                 statusError.classList.remove('visible');
 
                 try {
@@ -596,19 +602,24 @@
                     statusLoading.classList.remove('visible');
 
                     if (!data.configured) {
+                        statusHeader.classList.add('hidden');
                         statusError.classList.add('visible');
                         errorMessage.textContent = 'UniFi controller not configured';
+                        hasLoadedOnce = false;
                         return;
                     }
 
                     if (!data.connected) {
+                        statusHeader.classList.add('hidden');
                         statusError.classList.add('visible');
                         errorMessage.textContent = data.error || 'Unable to connect to UniFi controller';
+                        hasLoadedOnce = false;
                         return;
                     }
 
-                    // Show the status header
+                    // Show the status header and mark that we've loaded successfully
                     statusHeader.classList.remove('hidden');
+                    hasLoadedOnce = true;
 
                     const system = data.system;
                     const health = data.health || {};
