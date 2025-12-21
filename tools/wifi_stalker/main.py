@@ -54,7 +54,7 @@ def create_app() -> FastAPI:
         """Serve the Wi-Fi Stalker dashboard"""
         return templates.TemplateResponse(
             "index.html",
-            {"request": request}
+            {"request": request, "version": __version__}
         )
 
     # Status endpoint

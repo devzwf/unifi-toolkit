@@ -62,6 +62,7 @@ if __name__ == "__main__":
     from app import __version__ as app_version
     from tools.wifi_stalker import __version__ as stalker_version
     from tools.threat_watch import __version__ as threat_watch_version
+    from tools.network_pulse import __version__ as pulse_version
 
     settings = get_settings()
 
@@ -87,6 +88,7 @@ if __name__ == "__main__":
     print("Available tools:")
     print(f"  - Wi-Fi Stalker v{stalker_version}")
     print(f"  - Threat Watch v{threat_watch_version}")
+    print(f"  - Network Pulse v{pulse_version}")
     print()
 
     if deployment_type == "PRODUCTION":
@@ -95,6 +97,7 @@ if __name__ == "__main__":
         print("Access the dashboard at: http://localhost:8000")
         print("Wi-Fi Stalker at: http://localhost:8000/stalker/")
         print("Threat Watch at: http://localhost:8000/threats/")
+        print("Network Pulse at: http://localhost:8000/pulse/")
     print()
     print("Press Ctrl+C to stop the server")
     print("=" * 70)

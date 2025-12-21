@@ -13,7 +13,6 @@ Real-time system status including:
 - **Network Health** - WAN, LAN, WLAN, VPN status with diagnostic reasons
 - **Connected Clients** - Wired and wireless counts
 - **WAN Status** - IP, ISP, latency, uptime (supports multi-WAN)
-- **Speedtest** - On-demand speed testing (where supported)
 
 ### Wi-Fi Stalker
 Track specific Wi-Fi client devices through your UniFi infrastructure.
