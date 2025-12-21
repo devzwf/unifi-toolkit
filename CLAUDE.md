@@ -271,6 +271,7 @@ Key methods:
 - `get_clients()` - Get all active clients
 - `get_ap_name_by_mac()` - Resolve AP MAC to friendly name
 - `get_gateway_info()` - Get gateway details including IDS/IPS capability
+- `get_ips_settings()` - Get IDS/IPS configuration (mode, enabled status, DNS filtering)
 - `has_gateway()` - Check if site has a gateway device
 - `disconnect()` - Close connection
 
@@ -292,7 +293,46 @@ The `get_gateway_info()` method returns:
 }
 ```
 
-Threat Watch uses this to show appropriate messaging when a gateway exists but doesn't support IDS/IPS.
+The `get_ips_settings()` method queries `/rest/setting` for IPS configuration (UniFi OS only):
+```python
+{
+    "ips_mode": "ips",        # "disabled", "ids", "ips", or "ipsInline"
+    "ips_enabled": True,      # Convenience boolean
+    "honeypot_enabled": False,
+    "dns_filtering": "none",
+    "suppression_enabled": True
+}
+```
+
+**IPS Mode values:**
+- `disabled` - IDS/IPS is off
+- `ids` - Intrusion Detection only (alerts but doesn't block)
+- `ips` - Intrusion Prevention (blocks threats)
+- `ipsInline` - Inline IPS mode (more aggressive blocking)
+
+Threat Watch uses this to show appropriate messaging when a gateway exists but doesn't support IDS/IPS, or when IDS/IPS is disabled.
+
+### Caching (shared/cache.py)
+
+Simple in-memory cache to prevent race conditions when multiple components need gateway/IPS info:
+
+```python
+from shared import cache
+
+# Get/set gateway info (30-second TTL)
+cached = cache.get_gateway_info()
+cache.set_gateway_info({"has_gateway": True, ...})
+
+# Get/set IPS settings
+ips = cache.get_ips_settings()
+cache.set_ips_settings({"ips_mode": "ips", ...})
+
+# Invalidate cache
+cache.invalidate("gateway_info")
+cache.invalidate_all()
+```
+
+**Why caching matters:** Cloud Key devices can struggle with multiple concurrent API connections. The dashboard's `system-status` endpoint populates the cache, and `gateway-check` reads from it. This prevents race conditions where Threat Watch availability checks would fail intermittently.
 
 ### Encryption (shared/crypto.py)
 
@@ -377,6 +417,74 @@ Uses Alpine.js for reactivity. WebSocket connection for real-time updates.
 - Each sub-tool has a "Back to Dashboard" link in its header
 - The main dashboard at `/` shows all available tools as cards
 - Theme preference (dark/light) persists across navigation via localStorage
+
+## Threat Watch Tool Deep Dive
+
+### Core Concept
+
+Monitor IDS/IPS events from UniFi gateways that support threat detection. Features:
+- Real-time event feed with severity indicators
+- Top attackers analysis
+- Category breakdown (malware, exploits, scans, etc.)
+- Blocked vs detected event filtering
+- Webhook alerts for new threats
+
+### Prerequisites
+
+Threat Watch requires:
+1. **UniFi OS gateway** - UDM, UCG, UXG, or USG series (not UniFi Express)
+2. **IDS/IPS enabled** - Must be turned on in UniFi Network settings
+3. **UniFi OS authentication** - Legacy controllers don't expose IDS/IPS API endpoints
+
+### Gateway Detection Flow
+
+On dashboard load:
+1. `loadSystemStatus()` fetches `/api/system-status` which calls `get_gateway_info()` and `get_ips_settings()`
+2. Results are cached in `shared/cache.py` (30-second TTL)
+3. `checkGatewayAvailability()` waits for `systemStatusLoaded` event, then fetches `/api/config/gateway-check`
+4. Gateway check reads from cache to determine Threat Watch availability
+5. Dashboard shows appropriate status: available, disabled (with "check again" link), or unavailable
+
+### Database Tables
+
+**threats_events:**
+- IDS/IPS events fetched from UniFi
+- Includes timestamp, severity, category, source/destination IPs
+- `is_blocked` indicates if threat was blocked (IPS) or just detected (IDS)
+
+**threats_webhook_config:**
+- Webhook configurations for threat alerts
+- Supports Slack, Discord, n8n/generic
+
+### API Endpoints
+
+All mounted under `/threats/api/`:
+
+- **Events**: GET `/api/events` - List IDS/IPS events with filtering
+- **Stats**: GET `/api/stats` - Event counts by severity/category
+- **Top Attackers**: GET `/api/top-attackers` - Most frequent source IPs
+- **Webhooks**: GET/POST/PUT/DELETE `/api/webhooks`
+- **Refresh**: POST `/api/refresh` - Manually trigger event fetch
+
+### Frontend
+
+- **Template**: `tools/threat_watch/templates/index.html`
+- **Styles**: `tools/threat_watch/static/css/styles.css`
+
+Uses vanilla JavaScript with fetch API. Severity cards use colored backgrounds (high=red, medium=yellow, low=blue) with white text for contrast.
+
+### IDS Mode Badge
+
+The UI shows the current IDS/IPS mode in the header:
+- 🛡️ **IDS Mode** - Detection only, threats are logged but not blocked
+- 🛡️ **IPS Mode** - Prevention mode, threats are actively blocked
+
+### Dark Mode
+
+Threat Watch supports dark/light mode toggle. Key CSS considerations:
+- Severity cards maintain colored backgrounds in both modes
+- IPS status badge uses `.ips-status-badge` class with dark mode variant
+- Event table alternates row colors appropriately
 
 ## Database Migrations (Alembic)
 
