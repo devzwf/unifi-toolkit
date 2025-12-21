@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AP Details - Network Pulse</title>
+    <link rel="icon" type="image/jpeg" href="/static/images/favicon16x16.jpg">
+    <link rel="stylesheet" href="/pulse/static/css/styles.css">
+    <script>
+        // Apply saved theme immediately (default to dark for monitoring displays)
+        (function() {
+            const savedTheme = localStorage.getItem('unifi-toolkit-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* AP Detail Page Specific Styles */
+        .ap-info-card {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .ap-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ap-header-icon {
+            font-size: 2.5rem;
+        }
+
+        .ap-header-info h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .ap-header-info .model {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .ap-status-badge {
+            margin-left: auto;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .ap-status-badge.online {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .ap-status-badge.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .info-value.accent {
+            color: var(--accent-color);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .clients-table-container {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            overflow: hidden;
+        }
+
+        .clients-table-container h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .clients-table {
+            width: 100%;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .clients-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .clients-table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+        }
+
+        .clients-table td {
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .clients-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .clients-table tr:hover {
+            background: var(--surface-alt);
+        }
+
+        .client-name-cell {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .client-ip-cell {
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .client-ssid-cell {
+            color: var(--text-secondary);
+        }
+
+        .client-band-cell {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .client-band-cell.band-24 {
+            background: rgba(249, 115, 22, 0.15);
+            color: #f97316;
+        }
+
+        .client-band-cell.band-5 {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .client-band-cell.band-6 {
+            background: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
+
+        .client-signal-cell {
+            font-family: monospace;
+        }
+
+        .signal-good { color: var(--success); }
+        .signal-medium { color: var(--warning); }
+        .signal-poor { color: var(--error); }
+
+        .client-bandwidth-cell {
+            font-weight: 600;
+            color: var(--accent-color);
+            text-align: right;
+        }
+
+        .no-clients-message {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ap-header {
+                flex-wrap: wrap;
+            }
+
+            .ap-status-badge {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div x-data="apDetail()" x-init="init()" class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <a href="/pulse/" class="back-link">← Back to Network Pulse</a>
+            </div>
+            <div class="header-center">
+                <h1>📶 AP Details</h1>
+            </div>
+            <div class="header-right">
+                <!-- Empty for balance -->
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- AP Info Card -->
+            <div class="ap-info-card" x-show="!isLoading && ap">
+                <div class="ap-header">
+                    <span class="ap-header-icon">📶</span>
+                    <div class="ap-header-info">
+                        <h2 x-text="ap.name || 'Unknown AP'"></h2>
+                        <span class="model" x-text="ap.model || ap.model_code || 'Unknown Model'"></span>
+                    </div>
+                    <span class="ap-status-badge"
+                          :class="ap.state === 1 ? 'online' : 'offline'"
+                          x-text="ap.state === 1 ? 'Online' : 'Offline'"></span>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Connected Clients</span>
+                        <span class="info-value accent" x-text="clients.length"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Uptime</span>
+                        <span class="info-value" x-text="formatUptime(ap.uptime)"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Channels</span>
+                        <span class="info-value" x-text="ap.channels || '-'"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Satisfaction</span>
+                        <span class="info-value" x-text="ap.satisfaction ? ap.satisfaction + '%' : '-'"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">TX/RX</span>
+                        <span class="info-value" x-text="formatBytes(ap.tx_bytes) + ' / ' + formatBytes(ap.rx_bytes)"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart + Client Table Grid -->
+            <div class="detail-grid" x-show="!isLoading && ap">
+                <!-- Band Distribution Chart -->
+                <div class="chart-card">
+                    <h3>Clients by Band</h3>
+                    <div class="chart-container">
+                        <canvas id="apBandChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Clients Table -->
+                <div class="clients-table-container">
+                    <h3>Connected Clients (<span x-text="clients.length"></span>)</h3>
+                    <div class="clients-table" x-show="clients.length > 0">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>IP Address</th>
+                                    <th>SSID</th>
+                                    <th>Band</th>
+                                    <th>Signal</th>
+                                    <th>Bandwidth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="client in clients" :key="client.mac">
+                                    <tr>
+                                        <td class="client-name-cell" x-text="client.name || client.hostname || 'Unknown'"></td>
+                                        <td class="client-ip-cell" x-text="client.ip || '-'"></td>
+                                        <td class="client-ssid-cell" x-text="client.essid || (client.is_wired ? 'Wired' : '-')"></td>
+                                        <td>
+                                            <span class="client-band-cell"
+                                                  :class="getBandClass(client.radio)"
+                                                  x-text="client.radio || (client.is_wired ? 'Wired' : '-')"></span>
+                                        </td>
+                                        <td class="client-signal-cell"
+                                            :class="getSignalClass(client.rssi)"
+                                            x-text="client.rssi ? client.rssi + ' dBm' : '-'"></td>
+                                        <td class="client-bandwidth-cell" x-text="formatBytes(client.total_bytes)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="no-clients-message" x-show="clients.length === 0">
+                        No clients connected to this AP
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <div class="footer-left">
+                <!-- Empty -->
+            </div>
+            <div class="footer-center">
+                <span>Network Pulse - AP Details</span>
+            </div>
+            <div class="footer-right">
+                <span class="version">v{{ version }}</span>
+            </div>
+        </footer>
+
+        <!-- Loading Overlay -->
+        <div x-show="isLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading AP details...</div>
+        </div>
+
+        <!-- Error Toast -->
+        <div x-show="error" x-transition class="error-toast">
+            <span x-text="error"></span>
+            <button @click="error = null" class="toast-close">&times;</button>
+        </div>
+    </div>
+
+    <script src="/pulse/static/js/ap_detail.js"></script>
+</body>
+</html>

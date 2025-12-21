@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**UI Toolkit** (v1.6.0) is a comprehensive monorepo containing multiple tools for UniFi network management and monitoring. Each tool operates independently but shares common infrastructure for UniFi API access, database management, configuration, and authentication.
+**UI Toolkit** (v1.7.0) is a comprehensive monorepo containing multiple tools for UniFi network management and monitoring. Each tool operates independently but shares common infrastructure for UniFi API access, database management, configuration, and authentication.
 
 **Current Tools:**
 - **Wi-Fi Stalker v0.10.0** - Track specific client devices, monitor roaming, block/unblock devices, and maintain connection history with webhook alerts
 - **Threat Watch v0.3.0** - Monitor IDS/IPS events, view blocked threats, analyze attack patterns, and receive webhook alerts (with automatic detection of gateway IDS/IPS capability)
-- **Network Pulse v0.1.1** - Real-time network monitoring dashboard with system status, client counts, and network health visualization
+- **Network Pulse v0.2.0** - Real-time network monitoring dashboard with Chart.js visualizations (clients by band, clients by SSID, top bandwidth), clickable AP cards with detail pages, and WebSocket-powered live updates
 
 **External Tools (linked from dashboard):**
 - **UI Product Selector** - External site at uiproductselector.com for UniFi product recommendations
@@ -515,6 +515,61 @@ Threat Watch supports dark/light mode toggle. Key CSS considerations:
 - Severity cards maintain colored backgrounds in both modes
 - IPS status badge uses `.ips-status-badge` class with dark mode variant
 - Event table alternates row colors appropriately
+
+## Network Pulse Tool Deep Dive
+
+### Core Concept
+
+Real-time network monitoring dashboard with visualizations. Features:
+- Gateway status (model, version, uptime, WAN status)
+- Device counts (total clients, wired, wireless, APs, switches)
+- Current bandwidth throughput (TX/RX)
+- Chart.js visualizations for client distribution
+- Clickable AP cards with detailed client views
+
+### Dashboard Charts
+
+Three Chart.js visualizations on the main dashboard:
+- **Clients by Band** - Doughnut chart showing 2.4 GHz (orange), 5 GHz (blue), 6 GHz (purple), Wired (green)
+- **Clients by SSID** - Doughnut chart with dynamic colors for each network
+- **Top Bandwidth** - Horizontal bar chart showing top 5 clients by total bytes
+
+Charts update in real-time via WebSocket when the scheduler refreshes data (every 60 seconds).
+
+### AP Detail Pages
+
+Clicking any AP card navigates to `/pulse/ap/{ap_mac}` with:
+- AP info header (name, model, online/offline status)
+- Stats grid (connected clients, uptime, channels, satisfaction, TX/RX)
+- Band distribution chart for clients on that specific AP
+- Full client table with columns: Name, IP, SSID, Band, Signal (dBm), Bandwidth
+
+### Key Files
+
+- **`tools/network_pulse/scheduler.py`** - Background refresh every 60s, aggregates chart data
+- **`tools/network_pulse/models.py`** - Pydantic models including `ChartData`, `TopClient` with radio/ap_mac
+- **`tools/network_pulse/routers/stats.py`** - API endpoints including `/api/stats/ap/{ap_mac}`
+- **`tools/network_pulse/static/js/app.js`** - Alpine.js dashboard with chart management
+- **`tools/network_pulse/static/js/ap_detail.js`** - AP detail page component
+
+### Radio Band Mapping
+
+UniFi API radio codes are mapped to friendly names:
+- `ng`, `2g`, `b`, `g` → "2.4 GHz"
+- `na`, `5g`, `a`, `ac`, `ax` → "5 GHz"
+- `6e`, `6g` → "6 GHz"
+- Wired clients have `radio = None`
+
+### API Endpoints
+
+All mounted under `/pulse/api/`:
+- **Stats**: GET `/api/stats` - Full dashboard data including chart_data
+- **Status**: GET `/api/status` - Scheduler status and errors
+- **AP Detail**: GET `/api/stats/ap/{ap_mac}` - Single AP info with filtered clients
+
+### Caching
+
+All clients are cached in memory (`all_clients` list in `DashboardData`) for fast AP detail page loads without additional UniFi API calls.
 
 ## Database Migrations (Alembic)
 

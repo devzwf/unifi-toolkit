@@ -96,3 +96,57 @@ async def get_device_counts():
     if cached is None:
         raise HTTPException(status_code=503, detail="Data not available")
     return cached.devices.model_dump()
+
+
+@router.get("/ap/{ap_mac}")
+async def get_ap_detail(ap_mac: str):
+    """
+    Get detailed information about a specific AP and its connected clients.
+
+    Args:
+        ap_mac: MAC address of the access point
+
+    Returns:
+        - ap_info: AP details (name, model, uptime, channels, satisfaction)
+        - clients: List of clients connected to this AP
+        - clients_by_band: Radio band distribution for this AP
+    """
+    cached = get_cached_data()
+    if cached is None:
+        raise HTTPException(status_code=503, detail="Data not available")
+
+    # Normalize MAC for comparison (lowercase with colons)
+    ap_mac_normalized = ap_mac.lower().replace('-', ':')
+
+    # Find the AP
+    ap_info = None
+    for ap in cached.access_points:
+        if ap.mac.lower() == ap_mac_normalized:
+            ap_info = ap
+            break
+
+    if ap_info is None:
+        raise HTTPException(status_code=404, detail="AP not found")
+
+    # Filter clients for this AP
+    ap_clients = [
+        client for client in cached.all_clients
+        if client.ap_mac and client.ap_mac.lower() == ap_mac_normalized
+    ]
+
+    # Aggregate by band for this AP
+    clients_by_band = {}
+    for client in ap_clients:
+        if client.is_wired:
+            band_key = "Wired"
+        elif client.radio:
+            band_key = client.radio
+        else:
+            band_key = "Unknown"
+        clients_by_band[band_key] = clients_by_band.get(band_key, 0) + 1
+
+    return {
+        "ap_info": ap_info.model_dump(),
+        "clients": [c.model_dump() for c in ap_clients],
+        "clients_by_band": clients_by_band
+    }

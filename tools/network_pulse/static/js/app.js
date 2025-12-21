@@ -30,6 +30,12 @@ function networkPulse() {
         wsReconnectTimer: null,
         wsPingInterval: null,
 
+        // Charts
+        bandChart: null,
+        ssidChart: null,
+        bandwidthChart: null,
+        chartsInitialized: false,
+
         // State
         _initialized: false,
 
@@ -84,6 +90,15 @@ function networkPulse() {
                 this.isLoading = false;
                 this.error = null;
 
+                // Initialize charts after first data load (use setTimeout to ensure DOM is ready)
+                setTimeout(() => {
+                    if (!this.chartsInitialized) {
+                        this.initCharts();
+                    } else {
+                        this.updateCharts();
+                    }
+                }, 100);
+
             } catch (e) {
                 console.error('Failed to load stats:', e);
                 this.error = 'Failed to load dashboard data';
@@ -134,6 +149,11 @@ function networkPulse() {
                             this.data = message.data;
                             this.isLoading = false;
                             this.error = null;
+
+                            // Update charts with new data
+                            if (this.chartsInitialized) {
+                                this.updateCharts();
+                            }
                         } else if (message.type === 'pong') {
                             // Pong received, connection is alive
                         }
@@ -179,6 +199,12 @@ function networkPulse() {
             this.theme = this.theme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', this.theme);
             localStorage.setItem('unifi-toolkit-theme', this.theme);
+
+            // Recreate charts with new theme colors
+            if (this.chartsInitialized) {
+                this.destroyCharts();
+                this.initCharts();
+            }
         },
 
         /**
@@ -253,6 +279,250 @@ function networkPulse() {
                 case 'error': return '🔴';
                 default: return '⚪';
             }
+        },
+
+        /**
+         * Get theme-aware chart colors
+         */
+        getChartColors() {
+            const isDark = this.theme === 'dark';
+            return {
+                // Band colors
+                bands: {
+                    '2.4 GHz': '#f97316',  // Orange
+                    '5 GHz': '#3b82f6',    // Blue
+                    '6 GHz': '#8b5cf6',    // Purple
+                    'Wired': '#22c55e',    // Green
+                    'Unknown': '#6b7280'   // Gray
+                },
+                // Text colors
+                text: isDark ? '#f1f5f9' : '#1a1a2e',
+                textSecondary: isDark ? '#94a3b8' : '#6b7280',
+                // Grid colors
+                grid: isDark ? '#334155' : '#e5e7eb',
+                // Background
+                background: isDark ? '#1e293b' : '#ffffff'
+            };
+        },
+
+        /**
+         * Generate colors for SSID chart (dynamic based on count)
+         */
+        generateSsidColors(count) {
+            const baseColors = [
+                '#3b82f6', '#f97316', '#22c55e', '#8b5cf6',
+                '#ec4899', '#14b8a6', '#f59e0b', '#6366f1',
+                '#84cc16', '#06b6d4', '#ef4444', '#a855f7'
+            ];
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                colors.push(baseColors[i % baseColors.length]);
+            }
+            return colors;
+        },
+
+        /**
+         * Initialize all charts
+         */
+        initCharts() {
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js not loaded');
+                return;
+            }
+
+            const colors = this.getChartColors();
+
+            // Band Chart (Doughnut)
+            const bandCtx = document.getElementById('bandChart');
+            if (bandCtx && this.data.chart_data?.clients_by_band) {
+                const bandData = this.data.chart_data.clients_by_band;
+                const bandLabels = Object.keys(bandData);
+                const bandValues = Object.values(bandData);
+                const bandColors = bandLabels.map(label => colors.bands[label] || colors.bands['Unknown']);
+
+                this.bandChart = new Chart(bandCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: bandLabels,
+                        datasets: [{
+                            data: bandValues,
+                            backgroundColor: bandColors,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: colors.text,
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // SSID Chart (Doughnut)
+            const ssidCtx = document.getElementById('ssidChart');
+            if (ssidCtx && this.data.chart_data?.clients_by_ssid) {
+                const ssidData = this.data.chart_data.clients_by_ssid;
+                const ssidLabels = Object.keys(ssidData);
+                const ssidValues = Object.values(ssidData);
+                const ssidColors = this.generateSsidColors(ssidLabels.length);
+
+                this.ssidChart = new Chart(ssidCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ssidLabels,
+                        datasets: [{
+                            data: ssidValues,
+                            backgroundColor: ssidColors,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: colors.text,
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Bandwidth Chart (Horizontal Bar)
+            const bwCtx = document.getElementById('bandwidthChart');
+            if (bwCtx && this.data.top_clients?.length > 0) {
+                const topClients = this.data.top_clients.slice(0, 5);
+                const clientNames = topClients.map(c => c.name || c.hostname || 'Unknown');
+                const clientBandwidth = topClients.map(c => c.total_bytes);
+
+                this.bandwidthChart = new Chart(bwCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: clientNames,
+                        datasets: [{
+                            data: clientBandwidth,
+                            backgroundColor: '#F15A29',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        return this.formatBytes(context.raw);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: colors.textSecondary,
+                                    callback: (value) => this.formatBytes(value)
+                                },
+                                grid: {
+                                    color: colors.grid
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: colors.text
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            this.chartsInitialized = true;
+            console.log('Charts initialized');
+        },
+
+        /**
+         * Update chart data without recreating
+         */
+        updateCharts() {
+            // Update Band Chart
+            if (this.bandChart && this.data.chart_data?.clients_by_band) {
+                const bandData = this.data.chart_data.clients_by_band;
+                const colors = this.getChartColors();
+                const bandLabels = Object.keys(bandData);
+                const bandValues = Object.values(bandData);
+                const bandColors = bandLabels.map(label => colors.bands[label] || colors.bands['Unknown']);
+
+                this.bandChart.data.labels = bandLabels;
+                this.bandChart.data.datasets[0].data = bandValues;
+                this.bandChart.data.datasets[0].backgroundColor = bandColors;
+                this.bandChart.update('none');
+            }
+
+            // Update SSID Chart
+            if (this.ssidChart && this.data.chart_data?.clients_by_ssid) {
+                const ssidData = this.data.chart_data.clients_by_ssid;
+                const ssidLabels = Object.keys(ssidData);
+                const ssidValues = Object.values(ssidData);
+                const ssidColors = this.generateSsidColors(ssidLabels.length);
+
+                this.ssidChart.data.labels = ssidLabels;
+                this.ssidChart.data.datasets[0].data = ssidValues;
+                this.ssidChart.data.datasets[0].backgroundColor = ssidColors;
+                this.ssidChart.update('none');
+            }
+
+            // Update Bandwidth Chart
+            if (this.bandwidthChart && this.data.top_clients?.length > 0) {
+                const topClients = this.data.top_clients.slice(0, 5);
+                const clientNames = topClients.map(c => c.name || c.hostname || 'Unknown');
+                const clientBandwidth = topClients.map(c => c.total_bytes);
+
+                this.bandwidthChart.data.labels = clientNames;
+                this.bandwidthChart.data.datasets[0].data = clientBandwidth;
+                this.bandwidthChart.update('none');
+            }
+        },
+
+        /**
+         * Destroy all chart instances
+         */
+        destroyCharts() {
+            if (this.bandChart) {
+                this.bandChart.destroy();
+                this.bandChart = null;
+            }
+            if (this.ssidChart) {
+                this.ssidChart.destroy();
+                this.ssidChart = null;
+            }
+            if (this.bandwidthChart) {
+                this.bandwidthChart.destroy();
+                this.bandwidthChart = null;
+            }
+            this.chartsInitialized = false;
         }
     };
 }

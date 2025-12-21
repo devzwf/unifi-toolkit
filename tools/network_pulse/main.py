@@ -54,6 +54,15 @@ def create_app() -> FastAPI:
             {"request": request, "version": __version__}
         )
 
+    # AP detail page route
+    @app.get("/ap/{ap_mac}")
+    async def ap_detail_page(request: Request, ap_mac: str):
+        """Serve the AP detail page"""
+        return templates.TemplateResponse(
+            "ap_detail.html",
+            {"request": request, "ap_mac": ap_mac, "version": __version__}
+        )
+
     # Status endpoint
     @app.get("/api/status", response_model=SystemStatus, tags=["status"])
     async def get_status():

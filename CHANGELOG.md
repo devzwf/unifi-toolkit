@@ -2,6 +2,43 @@
 
 All notable changes to UI Toolkit will be documented in this file.
 
+## [1.7.0] - 2025-12-21
+
+### Network Pulse v0.2.0
+
+#### Added
+- **Dashboard charts** - Three new Chart.js visualizations:
+  - Clients by Band (2.4 GHz, 5 GHz, 6 GHz, Wired) doughnut chart
+  - Clients by SSID doughnut chart
+  - Top Bandwidth Clients horizontal bar chart
+- **AP detail pages** - Click any AP card to view detailed information:
+  - AP info (model, uptime, channels, satisfaction, TX/RX)
+  - Band distribution chart for that AP's clients
+  - Full client table with name, IP, SSID, band, signal strength, bandwidth
+- **Real-time chart updates** - Charts update automatically via WebSocket when data refreshes
+- **Theme-aware colors** - Charts adapt to dark/light mode toggle
+
+---
+
+## [1.6.0] - 2025-12-15
+
+### Wi-Fi Stalker v0.10.0
+
+#### Added
+- **Offline duration in webhooks** - Connected device webhooks now include how long the device was offline (e.g., "1h 21m")
+
+### Network Pulse v0.1.1
+
+#### Changed
+- **Theme inheritance** - Removed standalone theme toggle, now inherits from main dashboard
+
+### Dashboard
+
+#### Fixed
+- **Race condition** - Fixed gateway check timing issue on dashboard load using shared cache
+
+---
+
 ## [1.5.2] - 2025-12-05
 
 ### Wi-Fi Stalker v0.9.0

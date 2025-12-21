@@ -14,6 +14,7 @@
         })();
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div x-data="networkPulse()" x-init="init()" class="dashboard-container">
@@ -125,7 +126,12 @@
                     <h3>Access Points</h3>
                     <div class="ap-grid">
                         <template x-for="ap in data.access_points" :key="ap.mac">
-                            <div class="ap-card" :class="{'ap-online': ap.state === 1, 'ap-offline': ap.state !== 1}">
+                            <div class="ap-card clickable"
+                                 :class="{'ap-online': ap.state === 1, 'ap-offline': ap.state !== 1}"
+                                 @click="window.location.href = '/pulse/ap/' + encodeURIComponent(ap.mac)"
+                                 role="button"
+                                 tabindex="0"
+                                 @keydown.enter="window.location.href = '/pulse/ap/' + encodeURIComponent(ap.mac)">
                                 <div class="ap-status-dot" :class="ap.state === 1 ? 'online' : 'offline'"></div>
                                 <div class="ap-name" x-text="ap.name"></div>
                                 <div class="ap-clients">
@@ -137,6 +143,33 @@
                         <div x-show="!data.access_points || data.access_points.length === 0" class="no-aps">
                             No access points found
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Charts -->
+            <div class="charts-row">
+                <!-- Clients by Band -->
+                <div class="chart-card">
+                    <h3>Clients by Band</h3>
+                    <div class="chart-container">
+                        <canvas id="bandChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Clients by SSID -->
+                <div class="chart-card">
+                    <h3>Clients by SSID</h3>
+                    <div class="chart-container">
+                        <canvas id="ssidChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Bandwidth -->
+                <div class="chart-card">
+                    <h3>Top Bandwidth</h3>
+                    <div class="chart-container chart-container-bar">
+                        <canvas id="bandwidthChart"></canvas>
                     </div>
                 </div>
             </div>

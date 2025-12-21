@@ -22,7 +22,8 @@ from tools.network_pulse.models import (
     DeviceCounts,
     APStatus,
     TopClient,
-    NetworkHealth
+    NetworkHealth,
+    ChartData
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,23 @@ def get_last_error() -> Optional[str]:
 def get_cached_data() -> Optional[DashboardData]:
     """Get the cached dashboard data"""
     return _cached_data
+
+
+def get_radio_band_name(radio: str, is_wired: bool) -> Optional[str]:
+    """Convert UniFi radio code to friendly band name"""
+    if is_wired:
+        return None  # Wired clients don't have a radio band
+    if not radio:
+        return None
+
+    radio_lower = radio.lower()
+    if radio_lower in ('ng', '2g', 'b', 'g'):
+        return "2.4 GHz"
+    elif radio_lower in ('na', '5g', 'a', 'ac', 'ax'):
+        return "5 GHz"
+    elif radio_lower in ('6e', '6g'):
+        return "6 GHz"
+    return None  # Unknown radio type
 
 
 async def refresh_network_stats():
@@ -198,7 +216,7 @@ async def refresh_network_stats():
                     for ap in ap_details
                 ]
 
-                # Top clients
+                # Top clients (top 10 for display)
                 top_clients_list = [
                     TopClient(
                         mac=client.get('mac', ''),
@@ -212,10 +230,69 @@ async def refresh_network_stats():
                         is_wired=client.get('is_wired', False),
                         uptime=client.get('uptime'),
                         essid=client.get('essid'),
-                        network=client.get('network')
+                        network=client.get('network'),
+                        radio=get_radio_band_name(client.get('radio', ''), client.get('is_wired', False)),
+                        ap_mac=client.get('ap_mac')
                     )
                     for client in top_clients
                 ]
+
+                # All clients list (for AP detail pages)
+                all_clients_list = []
+                clients_by_band: Dict[str, int] = {}
+                clients_by_ssid: Dict[str, int] = {}
+
+                for client_data in clients.values():
+                    is_wired = client_data.get('is_wired', False)
+                    radio_band = get_radio_band_name(client_data.get('radio', ''), is_wired)
+                    essid = client_data.get('essid')
+
+                    # Handle None values for bytes
+                    tx_bytes = client_data.get('tx_bytes') or 0
+                    rx_bytes = client_data.get('rx_bytes') or 0
+
+                    # Build client object
+                    client_obj = TopClient(
+                        mac=client_data.get('mac', ''),
+                        name=client_data.get('name') or client_data.get('hostname') or 'Unknown',
+                        hostname=client_data.get('hostname'),
+                        ip=client_data.get('ip'),
+                        tx_bytes=tx_bytes,
+                        rx_bytes=rx_bytes,
+                        total_bytes=tx_bytes + rx_bytes,
+                        rssi=client_data.get('rssi'),
+                        is_wired=is_wired,
+                        uptime=client_data.get('uptime'),
+                        essid=essid,
+                        network=client_data.get('network'),
+                        radio=radio_band,
+                        ap_mac=client_data.get('ap_mac')
+                    )
+                    all_clients_list.append(client_obj)
+
+                    # Aggregate by band
+                    if is_wired:
+                        band_key = "Wired"
+                    elif radio_band:
+                        band_key = radio_band
+                    else:
+                        band_key = "Unknown"
+                    clients_by_band[band_key] = clients_by_band.get(band_key, 0) + 1
+
+                    # Aggregate by SSID
+                    if essid:
+                        clients_by_ssid[essid] = clients_by_ssid.get(essid, 0) + 1
+                    elif is_wired:
+                        clients_by_ssid["Wired"] = clients_by_ssid.get("Wired", 0) + 1
+
+                # Sort all_clients by total bandwidth descending
+                all_clients_list.sort(key=lambda c: c.total_bytes, reverse=True)
+
+                # Build chart data
+                chart_data = ChartData(
+                    clients_by_band=clients_by_band,
+                    clients_by_ssid=clients_by_ssid
+                )
 
                 # Network health
                 network_health = NetworkHealth(
@@ -236,6 +313,8 @@ async def refresh_network_stats():
                     current_rx_rate=wan_health_data.get('rx_bytes', 0),
                     access_points=access_points,
                     top_clients=top_clients_list,
+                    all_clients=all_clients_list,
+                    chart_data=chart_data,
                     health=network_health,
                     last_refresh=datetime.now(timezone.utc),
                     refresh_interval=60

@@ -2,7 +2,7 @@
 Pydantic models for Network Pulse API responses
 """
 from pydantic import BaseModel, Field, field_serializer
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime, timezone
 
 
@@ -70,6 +70,8 @@ class TopClient(BaseModel):
     uptime: Optional[int] = None
     essid: Optional[str] = None
     network: Optional[str] = None
+    radio: Optional[str] = None  # "2.4 GHz", "5 GHz", "6 GHz", or None for wired
+    ap_mac: Optional[str] = None  # MAC of connected AP
 
 
 class NetworkHealth(BaseModel):
@@ -91,6 +93,12 @@ class DeviceCounts(BaseModel):
     switches: int = 0
 
 
+class ChartData(BaseModel):
+    """Aggregated data for dashboard charts"""
+    clients_by_band: Dict[str, int] = Field(default_factory=dict)
+    clients_by_ssid: Dict[str, int] = Field(default_factory=dict)
+
+
 class DashboardData(BaseModel):
     """Combined dashboard data response"""
     # Gateway info
@@ -109,8 +117,14 @@ class DashboardData(BaseModel):
     # AP status list
     access_points: List[APStatus] = Field(default_factory=list)
 
-    # Top clients
+    # Top clients (top 10 by bandwidth for display)
     top_clients: List[TopClient] = Field(default_factory=list)
+
+    # All clients (for AP detail pages and chart aggregation)
+    all_clients: List[TopClient] = Field(default_factory=list)
+
+    # Chart data (aggregated client stats)
+    chart_data: ChartData = Field(default_factory=ChartData)
 
     # Network health by subsystem
     health: NetworkHealth = Field(default_factory=NetworkHealth)
