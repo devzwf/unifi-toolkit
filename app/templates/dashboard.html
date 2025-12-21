@@ -316,10 +316,12 @@
                         <span class="feature-badge">Roaming Detection</span>
                         <span class="feature-badge">History Logs</span>
                     </div>
-                    <div class="tool-actions">
-                        <a href="/stalker/" class="btn btn-primary">Open Wi-Fi Stalker</a>
+                    <div class="tool-bottom">
+                        <div class="tool-actions">
+                            <a href="/stalker/" class="btn btn-primary">Open Wi-Fi Stalker</a>
+                        </div>
+                        <div class="tool-version">v{{ stalker_version }}</div>
                     </div>
-                    <div class="tool-version">v{{ stalker_version }}</div>
                 </div>
 
                 <!-- Threat Watch Tool -->
@@ -335,11 +337,13 @@
                         <span class="feature-badge">Top Attackers</span>
                         <span class="feature-badge">Geo Lookup</span>
                     </div>
-                    <div class="tool-actions">
-                        <a href="/threats/" class="btn btn-primary" id="threat-watch-btn">Open Threat Watch</a>
-                    </div>
                     <div class="tool-status" id="threat-watch-status" style="display: none;"></div>
-                    <div class="tool-version">v{{ threat_watch_version }}</div>
+                    <div class="tool-bottom">
+                        <div class="tool-actions">
+                            <a href="/threats/" class="btn btn-primary" id="threat-watch-btn">Open Threat Watch</a>
+                        </div>
+                        <div class="tool-version">v{{ threat_watch_version }}</div>
+                    </div>
                 </div>
 
                 <!-- Network Pulse Tool -->
@@ -355,10 +359,12 @@
                         <span class="feature-badge">Client Usage</span>
                         <span class="feature-badge">Fullscreen Mode</span>
                     </div>
-                    <div class="tool-actions">
-                        <a href="/pulse/" class="btn btn-primary">Open Network Pulse</a>
+                    <div class="tool-bottom">
+                        <div class="tool-actions">
+                            <a href="/pulse/" class="btn btn-primary">Open Network Pulse</a>
+                        </div>
+                        <div class="tool-version">v{{ pulse_version }}</div>
                     </div>
-                    <div class="tool-version">v{{ pulse_version }}</div>
                 </div>
 
                 <div class="tool-card">
@@ -375,10 +381,12 @@
                         <span class="feature-badge">Build Sharing</span>
                         <span class="feature-badge">Community</span>
                     </div>
-                    <div class="tool-actions">
-                        <a href="https://uiproductselector.com" target="_blank" class="btn btn-primary">Open UI Product Selector</a>
+                    <div class="tool-bottom">
+                        <div class="tool-actions">
+                            <a href="https://uiproductselector.com" target="_blank" class="btn btn-primary">Open UI Product Selector</a>
+                        </div>
+                        <div class="tool-version">&nbsp;</div>
                     </div>
-                    <div class="tool-version">&nbsp;</div>
                 </div>
             </div>
 
@@ -923,9 +931,15 @@
             const threatWatchBtn = document.getElementById('threat-watch-btn');
             const threatWatchStatus = document.getElementById('threat-watch-status');
 
-            async function checkGatewayAvailability() {
+            async function checkGatewayAvailability(forceRefresh = false) {
+                // Reset classes
+                threatWatchStatus.classList.remove('status-success');
+                threatWatchStatus.style.color = '';
+
                 try {
-                    const response = await fetch('/api/config/gateway-check');
+                    // Add cache-busting param if forcing refresh
+                    const url = forceRefresh ? '/api/config/gateway-check?refresh=1' : '/api/config/gateway-check';
+                    const response = await fetch(url);
                     const data = await response.json();
 
                     if (!data.configured) {
@@ -934,7 +948,7 @@
                         threatWatchBtn.classList.add('disabled');
                         threatWatchBtn.style.pointerEvents = 'none';
                         threatWatchStatus.style.display = 'block';
-                        threatWatchStatus.innerHTML = '⚠️ <strong>UniFi controller not configured.</strong> Configure it using the settings button above.';
+                        threatWatchStatus.innerHTML = '⚠️ <strong>UniFi not configured.</strong> Use settings ⚙️ above.';
                         return;
                     }
 
@@ -944,7 +958,7 @@
                         threatWatchBtn.classList.add('disabled');
                         threatWatchBtn.style.pointerEvents = 'none';
                         threatWatchStatus.style.display = 'block';
-                        threatWatchStatus.innerHTML = '⚠️ <strong>Threat Watch requires a UniFi Gateway.</strong><br>Your site has no gateway device (UDM, UCG, UXG, or USG). IDS/IPS features are only available on gateway devices.';
+                        threatWatchStatus.innerHTML = '⚠️ <strong>No UniFi Gateway found.</strong> IDS/IPS requires a gateway (UDM, UCG, UXG, USG).';
                     } else if (!data.supports_ids_ips) {
                         // Gateway found but doesn't support IDS/IPS
                         const gatewayName = data.gateway_name || 'your gateway';
@@ -954,11 +968,9 @@
                         threatWatchBtn.style.pointerEvents = 'none';
                         threatWatchStatus.style.display = 'block';
                         if (isLegacyController) {
-                            // Legacy controller (Cloud Key, self-hosted) doesn't expose IDS/IPS API
-                            threatWatchStatus.innerHTML = `⚠️ <strong>IDS/IPS not available on legacy controllers.</strong><br>Your ${gatewayName.replace(' (Legacy Controller)', '')} supports IDS/IPS, but the legacy Network Controller (Cloud Key, self-hosted) does not expose these API endpoints. IDS/IPS monitoring requires a UniFi OS console (UDM, UCG, etc.).`;
+                            threatWatchStatus.innerHTML = `⚠️ <strong>IDS/IPS API not available.</strong> Legacy controllers don't expose these endpoints.`;
                         } else {
-                            // Gateway model itself doesn't support IDS/IPS (e.g., UniFi Express)
-                            threatWatchStatus.innerHTML = `⚠️ <strong>IDS/IPS not available on ${gatewayName}.</strong><br>This gateway model does not include IDS/IPS capabilities.`;
+                            threatWatchStatus.innerHTML = `⚠️ <strong>${gatewayName}</strong> doesn't support IDS/IPS.`;
                         }
                     } else {
                         // Gateway with IDS/IPS found - Threat Watch available
@@ -968,18 +980,17 @@
 
                         // Show IPS status if available
                         if (data.ips_enabled === false) {
-                            // IDS/IPS is disabled
+                            // IDS/IPS is disabled - show warning with "Check Again" link
                             threatWatchStatus.style.display = 'block';
-                            threatWatchStatus.innerHTML = `ℹ️ <strong>IDS/IPS is disabled.</strong> Enable it in UniFi Settings → Security → Internet Threat Management.`;
-                            threatWatchStatus.style.color = 'var(--text-muted)';
+                            threatWatchStatus.innerHTML = `ℹ️ <strong>IDS/IPS is disabled</strong> on ${data.gateway_name}.<span class="check-again" onclick="window.recheckGateway()">I enabled it - check again</span>`;
                         } else if (data.ips_mode) {
-                            // Show current mode
+                            // Show current mode with success styling
                             threatWatchStatus.style.display = 'block';
+                            threatWatchStatus.classList.add('status-success');
                             const modeLabel = data.ips_mode === 'ids' ? 'IDS (Detect Only)' :
                                              data.ips_mode === 'ips' || data.ips_mode === 'ipsInline' ? 'IPS (Detect & Block)' :
                                              data.ips_mode.toUpperCase();
-                            threatWatchStatus.innerHTML = `🛡️ ${modeLabel} active on ${data.gateway_name}`;
-                            threatWatchStatus.style.color = 'var(--success-color, #28a745)';
+                            threatWatchStatus.innerHTML = `🛡️ ${modeLabel} on ${data.gateway_name}`;
                         } else {
                             threatWatchStatus.style.display = 'none';
                         }
@@ -989,6 +1000,17 @@
                     // Don't block access on error - let the tool handle it
                 }
             }
+
+            // Expose recheck function globally for the "Check Again" link
+            window.recheckGateway = async function() {
+                threatWatchStatus.innerHTML = '⏳ Checking...';
+                // Invalidate cache by making a direct API call
+                try {
+                    await fetch('/api/config/gateway-check?invalidate=1');
+                } catch (e) {}
+                // Small delay then recheck
+                setTimeout(() => checkGatewayAvailability(true), 500);
+            };
 
             // Check on page load
             checkGatewayAvailability();

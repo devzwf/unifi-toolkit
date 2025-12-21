@@ -90,7 +90,7 @@
 
         <!-- IDS/IPS Status Badge (when enabled) -->
         {% if supports_ids_ips and ips_settings and ips_settings.ips_enabled %}
-        <div class="ips-status-badge" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.5rem 1rem; background: var(--success-bg, #d4edda); border: 1px solid var(--success-border, #28a745); border-radius: 6px; font-size: 0.9rem;">
+        <div class="ips-status-badge">
             <span style="font-size: 1.2rem;">🛡️</span>
             <span>
                 <strong>{{ ips_settings.ips_mode|upper }}</strong> Mode Active

@@ -258,7 +258,9 @@ async def test_saved_unifi_connection(
 
 @router.get("/gateway-check", response_model=GatewayCheckResponse)
 async def check_gateway_availability(
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    invalidate: str = None,
+    refresh: str = None
 ):
     """
     Check if a UniFi Gateway is present on the site.
@@ -267,6 +269,10 @@ async def check_gateway_availability(
     This endpoint uses cached data from system-status when available
     to avoid making multiple concurrent connections to the controller.
 
+    Query params:
+    - invalidate=1: Clear cache before checking
+    - refresh=1: Bypass cache and fetch fresh data
+
     Note: Legacy controllers (Cloud Key, self-hosted) do NOT expose IDS/IPS
     API endpoints, regardless of what gateway hardware is present.
     """
@@ -274,6 +280,12 @@ async def check_gateway_availability(
     import logging
 
     logger = logging.getLogger(__name__)
+
+    # Handle cache invalidation
+    if invalidate or refresh:
+        logger.debug("Invalidating gateway cache due to request parameter")
+        cache.invalidate("gateway_info")
+        cache.invalidate("ips_settings")
 
     # First, check if we have cached gateway info
     cached_info = cache.get_gateway_info()

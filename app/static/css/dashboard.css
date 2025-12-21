@@ -291,7 +291,7 @@ body {
     content: ")";
 }
 
-/* Speedtest button and card header */
+/* Detail card header */
 .detail-card-header {
     display: flex;
     justify-content: space-between;
@@ -442,6 +442,7 @@ body {
 .tool-features {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
 }
@@ -460,9 +461,15 @@ body {
     background: var(--secondary-color);
 }
 
+.tool-bottom {
+    margin-top: auto;
+}
+
 .tool-actions {
     margin-bottom: 1rem;
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .tool-version {
@@ -510,14 +517,29 @@ body {
 }
 
 .tool-status {
-    margin-top: 1rem;
-    padding: 1rem;
+    margin-top: auto;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
     background: #fef3c7;
     border: 1px solid #fbbf24;
     border-radius: 8px;
     color: #92400e;
-    font-size: 0.875rem;
-    line-height: 1.5;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+/* Success/info state for IDS active message */
+.tool-status.status-success {
+    background: #d1fae5;
+    border-color: #10b981;
+    color: #065f46;
+}
+
+:root[data-theme="dark"] .tool-status.status-success {
+    background: #064e3b;
+    border-color: #059669;
+    color: #6ee7b7;
 }
 
 :root[data-theme="dark"] .tool-status {
@@ -527,8 +549,21 @@ body {
 }
 
 .tool-status strong {
+    display: inline;
+}
+
+.tool-status .check-again {
     display: block;
-    margin-bottom: 0.25rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: inherit;
+    opacity: 0.8;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.tool-status .check-again:hover {
+    opacity: 1;
 }
 
 /* Buttons */
