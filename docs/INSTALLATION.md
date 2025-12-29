@@ -176,6 +176,25 @@ Or from another device on your network:
 http://<server-ip>:8000
 ```
 
+### Changing the Default Port
+
+By default, UI Toolkit runs on port 8000. To use a different port, add `APP_PORT` to your `.env` file:
+
+```bash
+# Edit your .env file
+nano .env
+
+# Add this line (example: port 8001)
+APP_PORT=8001
+```
+
+Then restart the application:
+
+```bash
+docker compose restart
+# or for Python: Ctrl+C and re-run python run.py
+```
+
 ---
 
 ## Production Deployment (Internet-Facing)

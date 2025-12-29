@@ -263,6 +263,9 @@ class ToolkitSettings(BaseSettings):
 
     # Wi-Fi Stalker settings
     stalker_refresh_interval: int = 60  # Seconds
+
+    # Server settings
+    app_port: int = 8000  # Application port (local deployment only)
 ```
 
 ### Database (shared/database.py)
