@@ -993,6 +993,53 @@ body {
     line-height: 1.6;
 }
 
+/* Legacy Authentication Collapsible Section */
+.legacy-section {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.legacy-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--background);
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+}
+
+.legacy-toggle:hover {
+    color: var(--text-primary);
+}
+
+.legacy-toggle-icon {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+.legacy-fields {
+    display: none;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.legacy-fields.expanded {
+    display: block;
+}
+
+.legacy-fields .form-group:last-child {
+    margin-bottom: 0;
+}
+
 .form-actions {
     display: flex;
     gap: 0.75rem;

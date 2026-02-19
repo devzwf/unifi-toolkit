@@ -164,6 +164,12 @@ validate_domain() {
 
 # Check if .env already exists
 check_existing_config() {
+    if [ -d ".env" ]; then
+        echo ""
+        print_error "'.env' exists as a directory, not a file. Please remove it and re-run setup:"
+        echo "  rm -rf .env"
+        exit 1
+    fi
     if [ -f ".env" ]; then
         echo ""
         print_warning "An existing .env file was found!"
