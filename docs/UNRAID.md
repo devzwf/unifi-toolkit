@@ -10,7 +10,8 @@ The easiest way to install UI Toolkit on Unraid:
 
 1. **Search & Install**: Go to Community Apps Manager, search for `unifi-toolkit`, and click **Install**.
 2. **Set Encryption Key**: You can generate a secure key by running this command in the Unraid terminal:
-   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+   
+   `docker run --rm python:3-slim sh -c "pip install -q cryptography && python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"`
 3. **Apply**: Paste the key into the template and click **Apply**.
 4. **Permissions**: If you receive a permission error, set permissions and restart the app:
    `chown -R 1000:1000 /mnt/user/appdata/unifi-toolkit`
