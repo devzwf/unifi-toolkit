@@ -36,7 +36,11 @@ If port `8000` is already in use on your Unraid server, change the **Host Port**
 
 ---
 
-## 🛠 Troubleshooting
+## Maintenance 
+
+* **Updates**: Check the Docker tab in Unraid. If an update is available, click the "Update Ready" link.
+
+## Troubleshooting
 
 * **Logs**: If the app doesn't load, check the container logs in the Docker tab for specific error messages.
 * **Database Fix**: If the database is locked or inaccessible, ensure the path `/mnt/user/appdata/unifi-toolkit` has the correct permissions (see step 4 above).
