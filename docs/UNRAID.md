@@ -13,7 +13,7 @@ The easiest way to install UI Toolkit on Unraid:
    `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 3. **Apply**: Paste the key into the template and click **Apply**.
 4. **Permissions**: If you receive a permission error, set permissions and restart the app:
-   `chmod -R 777 /mnt/user/appdata/unifi-toolkit`
+   `chown -R 1000:1000 /mnt/user/appdata/unifi-toolkit`
 5. **Access the Application**: Open your browser to `http://<UNRAID-IP>:8000`
 6. **Configure UniFi API Access**: Follow the setup wizard to link your controller.
 
