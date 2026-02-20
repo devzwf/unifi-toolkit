@@ -215,6 +215,16 @@
                 </div>
                 <div class="modal-body">
                     <form id="config-form">
+                        <div class="auth-info-box">
+                            <strong>Authentication:</strong>
+                            <p>
+                                🔐 <strong>API Key (recommended):</strong> UCG, UDM, UDR, Cloud Key, UniFi OS Server<br>
+                                <small style="margin-left: 1.5em; color: var(--text-muted);">More reliable — no session timeouts, bypasses 2FA</small><br>
+                                🔑 <strong>Legacy Authentication:</strong> Use username and password below<br>
+                                <small style="margin-left: 1.5em; color: var(--text-muted);">Required for legacy self-hosted Network Controller</small>
+                            </p>
+                        </div>
+
                         <div class="form-group">
                             <label for="controller_url">Controller URL *</label>
                             <input type="text"
@@ -225,51 +235,13 @@
                             <small>UCG/UDM/UDR: https://192.168.x.x &nbsp;|&nbsp; Legacy controller: https://192.168.x.x:8443</small>
                         </div>
 
-                        <div class="auth-info-box">
-                            <strong>Authentication:</strong>
-                            <p>
-                                🔐 <strong>API Key (recommended for UniFi OS):</strong> UCG, UDM, UDR, Cloud Key, UniFi OS Server<br>
-                                <small style="margin-left: 1.5em; color: var(--text-muted);">More reliable - no session timeouts, bypasses 2FA</small><br>
-                                🔑 <strong>Username/Password:</strong> All controllers (auto-detects UniFi OS vs legacy)<br>
-                                <small style="margin-left: 1.5em; color: var(--text-muted);">Required for legacy self-hosted Network Controller</small>
-                            </p>
-                        </div>
-
                         <div class="form-group">
                             <label for="api_key">API Key</label>
                             <input type="password"
                                    id="api_key"
                                    name="api_key"
                                    placeholder="Enter API key from UniFi Settings > Integrations">
-                            <small>Found in UniFi OS: Settings → Integrations → API Keys. Leave blank if using username/password.</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="username">Username</label>
-                            <input type="text"
-                                   id="username"
-                                   name="username"
-                                   placeholder="admin"
-                                   value="admin">
-                            <small>Leave blank if using API key</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password"
-                                   id="password"
-                                   name="password"
-                                   placeholder="Your password">
-                            <small>Leave blank if using API key</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="site_id">Site ID</label>
-                            <input type="text"
-                                   id="site_id"
-                                   name="site_id"
-                                   value="default">
-                            <small>Use "default" for single-site setups. For multi-site, use the ID from the URL (not the friendly name). Example: if URL is <code>/manage/site/abc123/...</code> use <code>abc123</code></small>
+                            <small>Found in UniFi OS: Settings → Integrations → API Keys</small>
                         </div>
 
                         <div class="form-group">
@@ -280,6 +252,39 @@
                                 Verify SSL Certificates
                             </label>
                             <small>Uncheck for self-signed certificates (most UniFi deployments)</small>
+                        </div>
+
+                        <div class="legacy-section">
+                            <button type="button" class="legacy-toggle" id="legacy-toggle">
+                                <span class="legacy-toggle-icon" id="legacy-toggle-icon">▶</span>
+                                Legacy Authentication
+                            </button>
+                            <div class="legacy-fields" id="legacy-fields">
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text"
+                                           id="username"
+                                           name="username"
+                                           placeholder="Enter username">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="password">Password</label>
+                                    <input type="password"
+                                           id="password"
+                                           name="password"
+                                           placeholder="Enter password">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="site_id">Site ID</label>
+                                    <input type="text"
+                                           id="site_id"
+                                           name="site_id"
+                                           placeholder="default">
+                                    <small>Use "default" for single-site setups. For multi-site, use the ID from the URL (not the friendly name). Example: if URL is <code>/manage/site/abc123/...</code> use <code>abc123</code></small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-actions">
@@ -388,11 +393,8 @@
                         <div class="tool-version">&nbsp;</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Info Section -->
-            <div class="info-section">
-                <div class="info-card">
+                <div class="info-card-grid">
                     <h3>About UI Toolkit</h3>
                     <p>
                         UI Toolkit is a comprehensive collection of tools designed to enhance
@@ -406,7 +408,7 @@
                     </p>
                 </div>
 
-                <div class="info-card">
+                <div class="info-card-grid">
                     <h3>Getting Started</h3>
                     <ol>
                         <li>Select a tool from the grid above</li>
@@ -415,19 +417,9 @@
                         <li>If you like this project, consider <a href="https://ko-fi.com/crosstalk" target="_blank">buying me a coffee</a>!</li>
                     </ol>
                     <p>
-                        Each tool has its own configuration and data, but they all leverage
+                        Each tool has its own configuration and data, but they all use
                         shared infrastructure for authentication and UniFi API access.
                     </p>
-                </div>
-
-                <div class="info-card">
-                    <h3>System Requirements</h3>
-                    <ul>
-                        <li>UniFi Network Controller (Cloud Key, UDM, UCG, or standalone)</li>
-                        <li>Python 3.9 - 3.12</li>
-                        <li>Access to UniFi Controller API</li>
-                        <li>Modern web browser with JavaScript enabled</li>
-                    </ul>
                 </div>
             </div>
 
@@ -741,6 +733,28 @@
             const configForm = document.getElementById('config-form');
             const testConnectionBtn = document.getElementById('test-connection-btn');
             const configMessage = document.getElementById('config-message');
+            const legacyToggle = document.getElementById('legacy-toggle');
+            const legacyFields = document.getElementById('legacy-fields');
+            const legacyToggleIcon = document.getElementById('legacy-toggle-icon');
+
+            // Legacy section toggle
+            function setLegacyOpen(open) {
+                if (open) {
+                    legacyFields.classList.add('expanded');
+                    legacyToggleIcon.textContent = '▼';
+                } else {
+                    legacyFields.classList.remove('expanded');
+                    legacyToggleIcon.textContent = '▶';
+                }
+            }
+
+            function isLegacyOpen() {
+                return legacyFields.classList.contains('expanded');
+            }
+
+            legacyToggle.addEventListener('click', function() {
+                setLegacyOpen(!isLegacyOpen());
+            });
 
             // Show config message
             function showConfigMessage(message, type = 'info') {
@@ -771,32 +785,50 @@
                     if (response.ok) {
                         const config = await response.json();
                         document.getElementById('controller_url').value = config.controller_url || '';
-                        document.getElementById('username').value = config.username || 'admin';
-                        document.getElementById('site_id').value = config.site_id || 'default';
                         document.getElementById('verify_ssl').checked = config.verify_ssl || false;
+
+                        // Only populate legacy fields if not using API key
+                        const hasLegacyCreds = config.username && !config.has_api_key;
+                        const hasCustomSite = config.site_id && config.site_id !== 'default';
+                        if (hasLegacyCreds) {
+                            document.getElementById('username').value = config.username || '';
+                        }
+                        if (hasLegacyCreds || hasCustomSite) {
+                            document.getElementById('site_id').value = config.site_id || '';
+                            setLegacyOpen(true);
+                        } else {
+                            document.getElementById('username').value = '';
+                            document.getElementById('site_id').value = '';
+                            setLegacyOpen(false);
+                        }
                     }
                 } catch (error) {
                     console.log('No existing config found');
                 }
             }
 
-            // Save config (tests connection first, only saves if successful)
-            async function saveConfig(e) {
-                e.preventDefault();
-
+            // Collect form data
+            function getFormData() {
                 const formData = new FormData(configForm);
-                const data = {
+                return {
                     controller_url: formData.get('controller_url'),
-                    username: formData.get('username') || 'admin',
+                    username: formData.get('username') || null,
                     password: formData.get('password') || null,
                     api_key: formData.get('api_key') || null,
                     site_id: formData.get('site_id') || 'default',
                     verify_ssl: formData.get('verify_ssl') === 'on'
                 };
+            }
+
+            // Save config (tests connection first, only saves if successful)
+            async function saveConfig(e) {
+                e.preventDefault();
+
+                const data = getFormData();
 
                 // Validate that either password or API key is provided
                 if (!data.password && !data.api_key) {
-                    showConfigMessage('Please provide either a password or API key', 'error');
+                    showConfigMessage('Please provide either an API key or username/password', 'error');
                     return;
                 }
 
@@ -862,19 +894,11 @@
 
             // Test connection (tests the form data, not saved config)
             async function testConnection() {
-                const formData = new FormData(configForm);
-                const data = {
-                    controller_url: formData.get('controller_url'),
-                    username: formData.get('username') || 'admin',
-                    password: formData.get('password') || null,
-                    api_key: formData.get('api_key') || null,
-                    site_id: formData.get('site_id') || 'default',
-                    verify_ssl: formData.get('verify_ssl') === 'on'
-                };
+                const data = getFormData();
 
                 // Validate that either password or API key is provided
                 if (!data.password && !data.api_key) {
-                    showConfigMessage('Please provide either a password or API key', 'error');
+                    showConfigMessage('Please provide either an API key or username/password', 'error');
                     return;
                 }
 
